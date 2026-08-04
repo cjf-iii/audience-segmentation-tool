@@ -197,6 +197,17 @@ After running the pipeline, here is what a segment profile looks like:
 
 ## Quick Start
 
+### Hardware verification
+
+```bash
+./scripts/verify_macos_metal.sh
+python -m unittest discover -s tests -v
+```
+
+The preflight fails unless the test host is an ARM64 Mac with Metal support. TF-IDF, UMAP, K-Means, and DBSCAN execute as CPU workloads on that machine; the project does not represent them as Metal-accelerated.
+
+See [VERIFICATION.md](VERIFICATION.md) for the recorded host, full-pipeline results, and reproduction commands.
+
 ### 1. Install dependencies
 
 ```bash
