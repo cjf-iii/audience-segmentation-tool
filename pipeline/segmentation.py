@@ -11,9 +11,9 @@ Responsibilities:
 
 Design notes:
   - The elbow method evaluates inertia (within-cluster sum of squares)
-    across a range of k values and picks the "knee" using the kneed library
-    heuristic.  If kneed is unavailable, a simple second-derivative approach
-    is used.
+    across a range of k values and selects the point with the largest
+    second-derivative change. This deterministic rule has no optional runtime
+    dependency.
   - Segment naming uses a rule-based approach that inspects the dominant
     industry and the median revenue/ad-spend of each cluster to compose
     descriptive labels like "High-Spend Entertainment Brands".
@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -129,8 +129,8 @@ def find_optimal_k(
     Use the elbow method to find the optimal number of clusters.
 
     Fits K-Means for each k in [min_k, max_k] and records inertia.
-    Then applies a second-derivative heuristic (or the ``kneed``
-    library if installed) to identify the elbow point.
+    Then applies a deterministic second-derivative heuristic to identify the
+    elbow point.
 
     Parameters
     ----------
@@ -159,21 +159,7 @@ def find_optimal_k(
         inertias.append(km.inertia_)
         logger.debug("k=%d  inertia=%.2f", k, km.inertia_)
 
-    # --- try the kneed library first (more robust) -----------------------
-    try:
-        from kneed import KneeLocator  # type: ignore[import-untyped]
-
-        kneedle = KneeLocator(
-            list(k_range), inertias, curve="convex", direction="decreasing"
-        )
-        if kneedle.knee is not None:
-            optimal_k = int(kneedle.knee)
-            logger.info("Kneed library selected k=%d", optimal_k)
-            return optimal_k, inertias
-    except ImportError:
-        logger.debug("kneed not installed — using second-derivative method")
-
-    # --- fallback: second derivative (finite differences) ----------------
+    # --- second derivative (finite differences) --------------------------
     if len(inertias) < 3:
         optimal_k = min_k
     else:
@@ -412,10 +398,7 @@ def generate_cluster_profiles(
         # --- industry distribution ---------------------------------------
         industry_counts = Counter(subset["industry"].tolist())
         dominant_industry = industry_counts.most_common(1)[0][0]
-        industry_dist = {
-            k: round(v / n * 100, 1)
-            for k, v in industry_counts.most_common()
-        }
+        industry_dist = {k: round(v / n * 100, 1) for k, v in industry_counts.most_common()}
 
         # --- campaign themes (bigram extraction) -------------------------
         themes = _extract_campaign_themes(subset["recent_campaigns"])
@@ -436,10 +419,7 @@ def generate_cluster_profiles(
             "industry_distribution": industry_dist,
             "campaign_themes": themes,
             "top_demographics": (
-                subset["target_demographics"]
-                .value_counts()
-                .head(3)
-                .index.tolist()
+                subset["target_demographics"].value_counts().head(3).index.tolist()
             ),
         }
 

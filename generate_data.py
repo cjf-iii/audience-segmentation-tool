@@ -13,16 +13,11 @@ reproducible across runs.
 """
 
 import csv
-import os
 import random
 from pathlib import Path
 from typing import Any
 
-# ---------------------------------------------------------------------------
-# Seed for reproducibility — every run produces the same dataset
-# ---------------------------------------------------------------------------
 SEED = 42
-random.seed(SEED)
 
 # ---------------------------------------------------------------------------
 # Output paths
@@ -41,16 +36,36 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Technology",
         "companies": [
-            "NovaTech Solutions", "CloudPeak Systems", "QuantumByte Inc",
-            "DataStream Analytics", "CyberForge Labs", "PixelWave Software",
-            "NeuralPath AI", "SkyGrid Computing", "CodeVault Technologies",
-            "ByteShift Networks", "Synthetix Data", "Apex Cloud Services",
-            "TerraNode Systems", "InfiniByte Corp", "PulseTech Innovations",
-            "ZeroDay Security", "MetaFrame Software", "GridIron Analytics",
-            "FusionStack Labs", "Quantum Leap Digital", "Archon Systems",
-            "VectorPoint AI", "Nimbus Infrastructure", "CipherNet Solutions",
-            "Helios Data Group", "Prism Analytics Co", "TitanScale Computing",
-            "Orbit Software Labs", "Axiom Cloud Inc", "DeepCore Technologies",
+            "NovaTech Solutions",
+            "CloudPeak Systems",
+            "QuantumByte Inc",
+            "DataStream Analytics",
+            "CyberForge Labs",
+            "PixelWave Software",
+            "NeuralPath AI",
+            "SkyGrid Computing",
+            "CodeVault Technologies",
+            "ByteShift Networks",
+            "Synthetix Data",
+            "Apex Cloud Services",
+            "TerraNode Systems",
+            "InfiniByte Corp",
+            "PulseTech Innovations",
+            "ZeroDay Security",
+            "MetaFrame Software",
+            "GridIron Analytics",
+            "FusionStack Labs",
+            "Quantum Leap Digital",
+            "Archon Systems",
+            "VectorPoint AI",
+            "Nimbus Infrastructure",
+            "CipherNet Solutions",
+            "Helios Data Group",
+            "Prism Analytics Co",
+            "TitanScale Computing",
+            "Orbit Software Labs",
+            "Axiom Cloud Inc",
+            "DeepCore Technologies",
         ],
         "descriptions": [
             "Enterprise SaaS platform providing cloud-native analytics and business intelligence tools for mid-market companies. Serves over 2,000 organizations across North America.",
@@ -83,16 +98,31 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Entertainment",
         "companies": [
-            "Starlight Entertainment", "Vivid Media Group", "Crimson Studios",
-            "Thunderbolt Productions", "Horizon Creative Agency",
-            "Blue Ember Entertainment", "Velvet Stage Productions",
-            "Golden Reel Media", "Echo Chamber Studios", "Neon Pulse Entertainment",
-            "Silver Screen Collective", "Waveform Audio Group",
-            "Midnight Sun Productions", "Radiant Films", "Mosaic Media Co",
-            "Prism Light Studios", "Cascade Entertainment Group",
-            "Storyboard Creative", "Limelight Media Inc", "Atlas Productions",
-            "Ember & Oak Studios", "Zenith Entertainment Corp",
-            "Parallax Media Group", "Kaleidoscope Studios", "Summit Creative Co",
+            "Starlight Entertainment",
+            "Vivid Media Group",
+            "Crimson Studios",
+            "Thunderbolt Productions",
+            "Horizon Creative Agency",
+            "Blue Ember Entertainment",
+            "Velvet Stage Productions",
+            "Golden Reel Media",
+            "Echo Chamber Studios",
+            "Neon Pulse Entertainment",
+            "Silver Screen Collective",
+            "Waveform Audio Group",
+            "Midnight Sun Productions",
+            "Radiant Films",
+            "Mosaic Media Co",
+            "Prism Light Studios",
+            "Cascade Entertainment Group",
+            "Storyboard Creative",
+            "Limelight Media Inc",
+            "Atlas Productions",
+            "Ember & Oak Studios",
+            "Zenith Entertainment Corp",
+            "Parallax Media Group",
+            "Kaleidoscope Studios",
+            "Summit Creative Co",
         ],
         "descriptions": [
             "Full-service production company creating original content for streaming platforms and broadcast networks. Recent projects include three Netflix Original series and a Hulu documentary.",
@@ -124,18 +154,31 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Finance",
         "companies": [
-            "Meridian Capital Group", "Ironclad Financial", "Pinnacle Wealth Advisors",
-            "Vanguard Fintech Solutions", "Cobalt Banking Systems",
-            "Sterling Asset Management", "Citadel Risk Analytics",
-            "Granite Financial Corp", "Summit Investment Partners",
-            "Osprey Capital Ventures", "Bedrock Insurance Group",
-            "Northstar Lending", "Keystone Financial Technologies",
-            "Bastion Credit Union", "Paragon Payments Inc",
-            "Redwood Wealth Management", "Falcon Financial Services",
-            "Evergreen Capital Advisors", "Titanium Trust Corp",
-            "Sapphire Banking Solutions", "Cornerstone Credit Partners",
-            "Fortify Risk Management", "Bridgewater Analytics Group",
-            "Zenith Payments Corp", "Archway Financial Holdings",
+            "Meridian Capital Group",
+            "Ironclad Financial",
+            "Pinnacle Wealth Advisors",
+            "Vanguard Fintech Solutions",
+            "Cobalt Banking Systems",
+            "Sterling Asset Management",
+            "Citadel Risk Analytics",
+            "Granite Financial Corp",
+            "Summit Investment Partners",
+            "Osprey Capital Ventures",
+            "Bedrock Insurance Group",
+            "Northstar Lending",
+            "Keystone Financial Technologies",
+            "Bastion Credit Union",
+            "Paragon Payments Inc",
+            "Redwood Wealth Management",
+            "Falcon Financial Services",
+            "Evergreen Capital Advisors",
+            "Titanium Trust Corp",
+            "Sapphire Banking Solutions",
+            "Cornerstone Credit Partners",
+            "Fortify Risk Management",
+            "Bridgewater Analytics Group",
+            "Zenith Payments Corp",
+            "Archway Financial Holdings",
         ],
         "descriptions": [
             "Digital-first banking platform offering checking, savings, and investment accounts with zero-fee structure. Serves 800,000 consumers and 50,000 small businesses nationwide.",
@@ -167,18 +210,30 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Healthcare",
         "companies": [
-            "MedVista Health Systems", "CarePoint Technologies",
-            "Helix Biomedical", "Pulse Health Analytics",
-            "Vitality Therapeutics", "ClearPath Diagnostics",
-            "Synapse Health AI", "Everwell Patient Solutions",
-            "Genome Insights Corp", "NovaCare Medical Devices",
-            "BioHorizon Labs", "Zenith Health Partners",
-            "CureLink Telemedicine", "Apex Pharmaceutical Group",
-            "Revive Wellness Corp", "MedStream Digital Health",
-            "ProHealth Systems Inc", "Catalyst Biotech",
-            "Lifeline Health Analytics", "PureForm Medical",
-            "WellBridge Health Network", "Guardian Medical Technologies",
-            "TrueNorth Diagnostics", "Elara Health Innovations",
+            "MedVista Health Systems",
+            "CarePoint Technologies",
+            "Helix Biomedical",
+            "Pulse Health Analytics",
+            "Vitality Therapeutics",
+            "ClearPath Diagnostics",
+            "Synapse Health AI",
+            "Everwell Patient Solutions",
+            "Genome Insights Corp",
+            "NovaCare Medical Devices",
+            "BioHorizon Labs",
+            "Zenith Health Partners",
+            "CureLink Telemedicine",
+            "Apex Pharmaceutical Group",
+            "Revive Wellness Corp",
+            "MedStream Digital Health",
+            "ProHealth Systems Inc",
+            "Catalyst Biotech",
+            "Lifeline Health Analytics",
+            "PureForm Medical",
+            "WellBridge Health Network",
+            "Guardian Medical Technologies",
+            "TrueNorth Diagnostics",
+            "Elara Health Innovations",
             "Summit Care Solutions",
         ],
         "descriptions": [
@@ -211,17 +266,30 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Retail & E-commerce",
         "companies": [
-            "UrbanThread Apparel", "FreshCart Groceries", "LuxeHome Interiors",
-            "PeakGear Outdoors", "GlowUp Beauty Co", "SwiftShip Logistics",
-            "CraftedGoods Marketplace", "TrendSetters Fashion",
-            "PantryPlus Delivery", "EcoBloom Sustainable Goods",
-            "MetroStyle Boutique", "GadgetBox Electronics",
-            "VintageVault Collectibles", "PureLeaf Organics",
-            "SnapDeal Commerce", "WildTrail Adventure Gear",
-            "BrightNest Home Goods", "FitForm Activewear",
-            "ArtisanAlley Crafts", "SparkJoy Gifts",
-            "HarvestTable Foods", "UrbanRoots Garden Supply",
-            "CloudCloset Fashion Tech", "NimbleMart Retail",
+            "UrbanThread Apparel",
+            "FreshCart Groceries",
+            "LuxeHome Interiors",
+            "PeakGear Outdoors",
+            "GlowUp Beauty Co",
+            "SwiftShip Logistics",
+            "CraftedGoods Marketplace",
+            "TrendSetters Fashion",
+            "PantryPlus Delivery",
+            "EcoBloom Sustainable Goods",
+            "MetroStyle Boutique",
+            "GadgetBox Electronics",
+            "VintageVault Collectibles",
+            "PureLeaf Organics",
+            "SnapDeal Commerce",
+            "WildTrail Adventure Gear",
+            "BrightNest Home Goods",
+            "FitForm Activewear",
+            "ArtisanAlley Crafts",
+            "SparkJoy Gifts",
+            "HarvestTable Foods",
+            "UrbanRoots Garden Supply",
+            "CloudCloset Fashion Tech",
+            "NimbleMart Retail",
             "Bloom & Barrel Co",
         ],
         "descriptions": [
@@ -254,13 +322,21 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Automotive",
         "companies": [
-            "VoltDrive Motors", "ApexAuto Group", "TerraMotion EV",
-            "IronHorse Fleet Services", "ClearRoad Technologies",
-            "Velocity Auto Parts", "GreenWheel Electric",
-            "PrecisionDrive Systems", "RoadRunner Logistics",
-            "TitanTruck Commercial", "AutoPilot Innovations",
-            "ElectraFleet Solutions", "CruiseControl Software",
-            "SteelPath Auto Group", "MotionTech Mobility",
+            "VoltDrive Motors",
+            "ApexAuto Group",
+            "TerraMotion EV",
+            "IronHorse Fleet Services",
+            "ClearRoad Technologies",
+            "Velocity Auto Parts",
+            "GreenWheel Electric",
+            "PrecisionDrive Systems",
+            "RoadRunner Logistics",
+            "TitanTruck Commercial",
+            "AutoPilot Innovations",
+            "ElectraFleet Solutions",
+            "CruiseControl Software",
+            "SteelPath Auto Group",
+            "MotionTech Mobility",
         ],
         "descriptions": [
             "Electric vehicle manufacturer producing affordable EVs for the mass market. Their compact sedan starts at $28,000 and offers 300 miles of range with a nationwide charging network.",
@@ -292,13 +368,21 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Food & Beverage",
         "companies": [
-            "BrightBrew Coffee", "HarvestMoon Foods", "PureSip Beverages",
-            "TerraGrain Baking Co", "FreshFusion Juicery",
-            "GoldenHarvest Snacks", "CraftBrew Collective",
-            "NourishPlate Meals", "SunRipe Produce Co",
-            "MapleLine Confections", "OceanCatch Seafood",
-            "VineRoots Winery", "SpiceLane Foods",
-            "MeadowFarm Dairy", "UrbanBite Restaurants",
+            "BrightBrew Coffee",
+            "HarvestMoon Foods",
+            "PureSip Beverages",
+            "TerraGrain Baking Co",
+            "FreshFusion Juicery",
+            "GoldenHarvest Snacks",
+            "CraftBrew Collective",
+            "NourishPlate Meals",
+            "SunRipe Produce Co",
+            "MapleLine Confections",
+            "OceanCatch Seafood",
+            "VineRoots Winery",
+            "SpiceLane Foods",
+            "MeadowFarm Dairy",
+            "UrbanBite Restaurants",
         ],
         "descriptions": [
             "Specialty coffee roaster and cafe chain with 45 locations and a thriving DTC subscription business. Sources beans directly from farms in Colombia, Ethiopia, and Guatemala.",
@@ -330,13 +414,20 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Real Estate",
         "companies": [
-            "Skyline Properties", "Cornerstone Realty Group",
-            "UrbanNest Developments", "ClearTitle Mortgage",
-            "PrimeLocation Brokerage", "GreenBuild Construction",
-            "MetroLiving Apartments", "FairHaven Real Estate",
-            "BlueDoor Home Loans", "Landmark Commercial Realty",
-            "SilverKey Property Management", "HorizonView Developments",
-            "TrueHome Inspections", "ParkPlace Luxury Realty",
+            "Skyline Properties",
+            "Cornerstone Realty Group",
+            "UrbanNest Developments",
+            "ClearTitle Mortgage",
+            "PrimeLocation Brokerage",
+            "GreenBuild Construction",
+            "MetroLiving Apartments",
+            "FairHaven Real Estate",
+            "BlueDoor Home Loans",
+            "Landmark Commercial Realty",
+            "SilverKey Property Management",
+            "HorizonView Developments",
+            "TrueHome Inspections",
+            "ParkPlace Luxury Realty",
             "CedarPoint Properties",
         ],
         "descriptions": [
@@ -369,13 +460,20 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Education",
         "companies": [
-            "BrightPath Learning", "SkillForge Academy",
-            "MindSpark EdTech", "EduVista Online",
-            "NextGen Tutoring", "Campus Connect Solutions",
-            "LearnLoop Technologies", "AcademicEdge Prep",
-            "CodeCraft Bootcamp", "ScholarsGate Publishing",
-            "CuriousMind Labs", "TutorBridge Platform",
-            "Elevate Learning Group", "PenPoint EdMedia",
+            "BrightPath Learning",
+            "SkillForge Academy",
+            "MindSpark EdTech",
+            "EduVista Online",
+            "NextGen Tutoring",
+            "Campus Connect Solutions",
+            "LearnLoop Technologies",
+            "AcademicEdge Prep",
+            "CodeCraft Bootcamp",
+            "ScholarsGate Publishing",
+            "CuriousMind Labs",
+            "TutorBridge Platform",
+            "Elevate Learning Group",
+            "PenPoint EdMedia",
             "FutureReady Schools",
         ],
         "descriptions": [
@@ -408,13 +506,20 @@ INDUSTRIES: list[dict[str, Any]] = [
     {
         "name": "Travel & Hospitality",
         "companies": [
-            "Wanderlust Resorts", "SkyBound Airlines",
-            "TrailHead Adventures", "LuxeStay Hotels",
-            "CoastalBreeze Cruises", "NomadPack Travel Tech",
-            "SerenitySpas Wellness", "JetStream Tours",
-            "AlpineRidge Lodges", "UrbanExplorer Hostels",
-            "Voyager Booking Platform", "SummitView Retreats",
-            "GoldenSands Resorts", "CulturalBridge Tours",
+            "Wanderlust Resorts",
+            "SkyBound Airlines",
+            "TrailHead Adventures",
+            "LuxeStay Hotels",
+            "CoastalBreeze Cruises",
+            "NomadPack Travel Tech",
+            "SerenitySpas Wellness",
+            "JetStream Tours",
+            "AlpineRidge Lodges",
+            "UrbanExplorer Hostels",
+            "Voyager Booking Platform",
+            "SummitView Retreats",
+            "GoldenSands Resorts",
+            "CulturalBridge Tours",
             "HarborLight Hospitality",
         ],
         "descriptions": [
@@ -447,12 +552,12 @@ INDUSTRIES: list[dict[str, Any]] = [
 ]
 
 
-def _rand_in_range(low: int, high: int) -> int:
+def _rand_in_range(low: int, high: int, rng: random.Random) -> int:
     """Return a random integer between low and high, inclusive."""
-    return random.randint(low, high)
+    return rng.randint(low, high)
 
 
-def _generate_prospects(n: int = 500) -> list[dict[str, Any]]:
+def _generate_prospects(n: int = 500, seed: int = SEED) -> list[dict[str, Any]]:
     """
     Build *n* synthetic prospect records by sampling from industry templates.
 
@@ -460,6 +565,9 @@ def _generate_prospects(n: int = 500) -> list[dict[str, Any]]:
     description/campaign/demographic string from its industry pool, and
     numeric features drawn uniformly from the industry's configured ranges.
     """
+    if n < 1:
+        raise ValueError("n must be at least 1")
+    rng = random.Random(seed)
     prospects: list[dict[str, Any]] = []
 
     # ---- distribute n records across industries roughly evenly ----------
@@ -470,7 +578,7 @@ def _generate_prospects(n: int = 500) -> list[dict[str, Any]]:
         # The first `remainder` industries each get one extra record
         count = per_industry + (1 if idx < remainder else 0)
         companies = list(industry["companies"])  # copy so we can pop
-        random.shuffle(companies)
+        rng.shuffle(companies)
 
         for i in range(count):
             # Cycle through company names if we need more records than names
@@ -489,26 +597,22 @@ def _generate_prospects(n: int = 500) -> list[dict[str, Any]]:
                 {
                     "company_name": company,
                     "industry": industry["name"],
-                    "annual_revenue": _rand_in_range(rev_lo, rev_hi),
-                    "employee_count": _rand_in_range(emp_lo, emp_hi),
-                    "website_description": random.choice(
-                        industry["descriptions"]
-                    ),
-                    "recent_campaigns": random.choice(industry["campaigns"]),
-                    "social_presence_score": _rand_in_range(soc_lo, soc_hi),
-                    "current_ad_spend_estimate": _rand_in_range(ads_lo, ads_hi),
-                    "target_demographics": random.choice(
-                        industry["demographics"]
-                    ),
+                    "annual_revenue": _rand_in_range(rev_lo, rev_hi, rng),
+                    "employee_count": _rand_in_range(emp_lo, emp_hi, rng),
+                    "website_description": rng.choice(industry["descriptions"]),
+                    "recent_campaigns": rng.choice(industry["campaigns"]),
+                    "social_presence_score": _rand_in_range(soc_lo, soc_hi, rng),
+                    "current_ad_spend_estimate": _rand_in_range(ads_lo, ads_hi, rng),
+                    "target_demographics": rng.choice(industry["demographics"]),
                 }
             )
 
-    random.shuffle(prospects)
+    rng.shuffle(prospects)
     return prospects
 
 
 def _generate_deals(
-    prospects: list[dict[str, Any]], n: int = 200
+    prospects: list[dict[str, Any]], n: int = 200, seed: int = SEED + 1
 ) -> list[dict[str, Any]]:
     """
     Build *n* synthetic deal-history records by sampling from the prospect
@@ -516,35 +620,52 @@ def _generate_deals(
     but correlated with the prospect's numeric profile (bigger companies
     tend to have larger deals and longer cycles).
     """
+    if not prospects:
+        raise ValueError("prospects cannot be empty")
+    if n < 1:
+        raise ValueError("n must be at least 1")
+    rng = random.Random(seed)
+
     # Channel options that a media sales team would recognise
     channel_options = [
-        "Programmatic Display", "CTV/OTT", "Paid Social", "Podcast Audio",
-        "Search/SEM", "Native Content", "Out-of-Home", "Email Marketing",
-        "Influencer", "Direct Mail", "Digital Video", "Print",
-        "Retail Media", "Branded Content", "Events & Sponsorships",
+        "Programmatic Display",
+        "CTV/OTT",
+        "Paid Social",
+        "Podcast Audio",
+        "Search/SEM",
+        "Native Content",
+        "Out-of-Home",
+        "Email Marketing",
+        "Influencer",
+        "Direct Mail",
+        "Digital Video",
+        "Print",
+        "Retail Media",
+        "Branded Content",
+        "Events & Sponsorships",
     ]
 
     deals: list[dict[str, Any]] = []
-    sampled = random.choices(prospects, k=n)
+    sampled = rng.choices(prospects, k=n)
 
     for prospect in sampled:
         # Deal value is loosely proportional to the prospect's ad spend,
         # adding noise so the model has something interesting to learn
         base = prospect["current_ad_spend_estimate"]
-        deal_value = int(base * random.uniform(0.1, 0.6))
+        deal_value = int(base * rng.uniform(0.1, 0.6))
 
         # Select 1-4 channels for this deal
-        num_channels = random.randint(1, 4)
-        channels = ", ".join(random.sample(channel_options, num_channels))
+        num_channels = rng.randint(1, 4)
+        channels = ", ".join(rng.sample(channel_options, num_channels))
 
         # Win rate influenced by social score (higher engagement → higher
         # close rate).  This creates a learnable signal.
         win_prob = 0.3 + (prospect["social_presence_score"] / 100) * 0.4
-        outcome = "won" if random.random() < win_prob else "lost"
+        outcome = "won" if rng.random() < win_prob else "lost"
 
         # Larger companies → longer sales cycles
         base_cycle = 30 + (prospect["employee_count"] / 1_000) * 20
-        sales_cycle = int(base_cycle * random.uniform(0.5, 2.0))
+        sales_cycle = int(base_cycle * rng.uniform(0.5, 2.0))
 
         deals.append(
             {
@@ -566,9 +687,15 @@ def main() -> None:
     # ---- prospects.csv --------------------------------------------------
     prospects = _generate_prospects(500)
     fieldnames_p = [
-        "company_name", "industry", "annual_revenue", "employee_count",
-        "website_description", "recent_campaigns", "social_presence_score",
-        "current_ad_spend_estimate", "target_demographics",
+        "company_name",
+        "industry",
+        "annual_revenue",
+        "employee_count",
+        "website_description",
+        "recent_campaigns",
+        "social_presence_score",
+        "current_ad_spend_estimate",
+        "target_demographics",
     ]
     with open(PROSPECTS_PATH, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames_p)
@@ -579,7 +706,10 @@ def main() -> None:
     # ---- deal_history.csv -----------------------------------------------
     deals = _generate_deals(prospects, 200)
     fieldnames_d = [
-        "company_name", "deal_value", "channels_used", "outcome",
+        "company_name",
+        "deal_value",
+        "channels_used",
+        "outcome",
         "sales_cycle_days",
     ]
     with open(DEALS_PATH, "w", newline="", encoding="utf-8") as f:

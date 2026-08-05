@@ -16,7 +16,6 @@ re-fitting (useful for a future scoring API).
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -34,6 +33,10 @@ NUMERIC_COLS: list[str] = [
     "employee_count",
     "social_presence_score",
     "current_ad_spend_estimate",
+    "deal_count",
+    "mean_deal_value",
+    "win_rate",
+    "mean_sales_cycle_days",
 ]
 
 # ---------------------------------------------------------------------------
@@ -80,7 +83,7 @@ class TextFeatureProcessor:
         # These are populated during fit()
         self._vectorizers: dict[str, TfidfVectorizer] = {}
         self._reducers: dict[str, object] = {}
-        self._scaler: Optional[StandardScaler] = None
+        self._scaler: StandardScaler | None = None
         self._is_fitted: bool = False
 
     # ------------------------------------------------------------------
@@ -109,9 +112,7 @@ class TextFeatureProcessor:
                     min_dist=0.1,
                 )
             except ImportError:
-                logger.warning(
-                    "umap-learn not installed — falling back to PCA"
-                )
+                logger.warning("umap-learn not installed — falling back to PCA")
 
         # Fallback: PCA (always available via scikit-learn)
         from sklearn.decomposition import PCA
@@ -122,9 +123,7 @@ class TextFeatureProcessor:
             random_state=self.random_state,
         )
 
-    def _vectorize_text(
-        self, series: pd.Series, col_name: str, fit: bool = True
-    ) -> np.ndarray:
+    def _vectorize_text(self, series: pd.Series, col_name: str, fit: bool = True) -> np.ndarray:
         """
         Convert a text Series into a TF-IDF sparse matrix, then reduce
         its dimensionality.
@@ -153,9 +152,9 @@ class TextFeatureProcessor:
             vectorizer = TfidfVectorizer(
                 max_features=self.max_tfidf_features,
                 stop_words="english",
-                ngram_range=(1, 2),   # unigrams + bigrams for richer signal
-                min_df=2,             # ignore terms appearing in < 2 docs
-                max_df=0.95,          # ignore terms appearing in > 95% docs
+                ngram_range=(1, 2),  # unigrams + bigrams for richer signal
+                min_df=2,  # ignore terms appearing in < 2 docs
+                max_df=0.95,  # ignore terms appearing in > 95% docs
             )
             tfidf_matrix = vectorizer.fit_transform(clean_text)
             self._vectorizers[col_name] = vectorizer
@@ -229,7 +228,7 @@ class TextFeatureProcessor:
             parts.append(reduced)
 
         # --- numeric features (z-score scaled) ---------------------------
-        numeric = df[NUMERIC_COLS].fillna(0).values.astype(float)
+        numeric = df.reindex(columns=NUMERIC_COLS, fill_value=0).fillna(0).values.astype(float)
         self._scaler = StandardScaler()
         scaled = self._scaler.fit_transform(numeric)
         parts.append(scaled)
@@ -250,9 +249,7 @@ class TextFeatureProcessor:
         Raises RuntimeError if fit_transform() has not been called first.
         """
         if not self._is_fitted:
-            raise RuntimeError(
-                "Processor has not been fitted. Call fit_transform() first."
-            )
+            raise RuntimeError("Processor has not been fitted. Call fit_transform() first.")
 
         parts: list[np.ndarray] = []
 
@@ -260,7 +257,7 @@ class TextFeatureProcessor:
             reduced = self._vectorize_text(df[col], col, fit=False)
             parts.append(reduced)
 
-        numeric = df[NUMERIC_COLS].fillna(0).values.astype(float)
+        numeric = df.reindex(columns=NUMERIC_COLS, fill_value=0).fillna(0).values.astype(float)
         scaled = self._scaler.transform(numeric)  # type: ignore[union-attr]
         parts.append(scaled)
 

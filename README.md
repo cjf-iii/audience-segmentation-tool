@@ -1,276 +1,122 @@
-<div align="center">
-
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-ML_Pipeline-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-Interactive_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![NLP](https://img.shields.io/badge/NLP-TF--IDF_Vectorization-blueviolet?style=for-the-badge)
-![UMAP](https://img.shields.io/badge/UMAP-Dimensionality_Reduction-teal?style=for-the-badge)
-
 # Audience Segmentation Tool
 
-### Turn a messy spreadsheet of prospects into named, targetable audience segments — automatically.
+[![tests](https://github.com/cjf-iii/audience-segmentation-tool/actions/workflows/tests.yml/badge.svg)](https://github.com/cjf-iii/audience-segmentation-tool/actions/workflows/tests.yml)
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![uv](https://img.shields.io/badge/environment-uv-DE5FE9)
+![License MIT](https://img.shields.io/badge/license-MIT-green)
 
-*No manual tagging. No guesswork. Just data science applied to real sales problems.*
+An end-to-end, reproducible NLP pipeline that turns synthetic prospect and deal-history data into named audience segments, rule-based outreach guidance, and reviewable artifacts.
 
-</div>
+> Resume claim: Built an NLP segmentation pipeline for 500 prospects using TF-IDF, UMAP, K-Means, and DBSCAN; delivered CLI and Streamlit outputs with named clusters and outreach recommendations.
 
----
+## Review it in five commands
 
-## What This Does
+```bash
+uv sync --locked
+uv run python -m unittest discover -s tests -v
+uv run python generate_data.py
+uv run python segment.py --input data/prospects.csv --deals data/deal_history.csv --clusters auto --output results
+uv run python scripts/verify_artifacts.py
+```
 
-Imagine you have **500 prospects** in a spreadsheet — company descriptions, campaign histories, revenue figures, ad spend, social engagement scores. Right now, a human analyst would spend days reading through them, sorting them into groups, and writing outreach plans for each group.
+Then launch the same results through the interactive interface:
 
-**This tool does all of that in under 30 seconds.**
+```bash
+uv run streamlit run app.py
+```
 
-It reads your prospect data, understands the text using natural language processing, groups similar companies together using machine learning, then automatically names each group and writes a tailored outreach strategy for it.
+The project uses `uv` exclusively. `.python-version` pins Python 3.12 and `uv.lock` pins the complete environment.
 
-**Before:** A flat list of 500 companies with no structure.
-**After:** Clearly defined segments like *"Enterprise Finance Big Spenders"* and *"High-Spend Entertainment Brands"* — each with a profile, key stats, and a recommended approach for reaching them.
+## Executable reviewer notebook
 
----
+[Open the raw-data-to-validation tutorial](notebooks/01_data_to_validation.ipynb), or launch it from the repository root:
 
-## The Problem It Solves
+```bash
+uv sync --locked --group notebook
+uv run --group notebook jupyter lab notebooks/01_data_to_validation.ipynb
+```
 
-Sales teams waste hours manually sorting prospects. The groupings are inconsistent, subjective, and don't scale. When a new batch of prospects arrives, the whole process starts over.
+The notebook degrades the generated prospect and deal exports, proves exact schema and row recovery, then executes the real TF-IDF/UMAP/K-Means/DBSCAN pipeline and repository tests. CI executes every cell without modifying the committed notebook.
 
-This tool replaces that manual work with a **repeatable, data-driven pipeline** that:
-
-- Finds patterns humans miss (text similarity, spending behavior, engagement levels)
-- Produces consistent segments every time
-- Scales from 500 to 50,000 prospects without additional effort
-- Generates ready-to-use outreach strategies for each segment
-
----
-
-## How It Works
+## System design
 
 ```mermaid
 flowchart LR
-    A["Raw Prospect Data\n500 companies\n24 features each"] --> B["Text Processing\nTF-IDF Vectorization\nbigrams + stop word removal"]
-    B --> C["Dimension Reduction\nUMAP projection\n24 features → 10 components"]
-    C --> D["Clustering\nK-Means + DBSCAN\nauto-selects optimal k"]
-    D --> E["Named Segments\n+ Outreach Strategies"]
-
-    style A fill:#4A90D9,stroke:#2C5F8A,color:#fff
-    style B fill:#7B68EE,stroke:#5A4FB0,color:#fff
-    style C fill:#20B2AA,stroke:#178A82,color:#fff
-    style D fill:#FF8C00,stroke:#CC7000,color:#fff
-    style E fill:#32CD32,stroke:#269926,color:#fff
+    P["Synthetic prospects\n500 rows"] --> J["Validated company join"]
+    D["Synthetic deal history\n200 rows"] --> A["Per-company aggregates\ncount, mean value, win rate, cycle"]
+    A --> J
+    J --> F["Feature pipeline\nTF-IDF + UMAP/PCA + scaling"]
+    F --> K["K-Means\nautomatic elbow selection"]
+    F --> B["DBSCAN\ncomparison"]
+    K --> O["CSV + JSON + HTML + Markdown"]
+    B --> O
+    O --> C["CLI"]
+    O --> S["Streamlit viewer"]
 ```
 
-**In plain English:**
+The clustering matrix combines two reduced text representations with eight scaled numeric features:
 
-1. **Read** the prospect spreadsheet (company descriptions, campaign notes, revenue, ad spend, social metrics)
-2. **Understand** the text by converting words into numerical patterns (TF-IDF vectorization)
-3. **Compress** the 24-feature dataset into a manageable shape (UMAP dimensionality reduction)
-4. **Group** similar prospects together using clustering algorithms (K-Means finds the best number of groups; DBSCAN validates density)
-5. **Name** each group automatically based on its dominant traits ("High-Spend Entertainment Brands")
-6. **Write** outreach strategies tailored to each segment's characteristics
+- website descriptions and recent campaign text become TF-IDF vectors, then UMAP or PCA components;
+- prospect revenue, employee count, social score, and estimated ad spend provide commercial context;
+- actual aggregates from `deal_history.csv` add deal count, mean deal value, win rate, and mean sales-cycle duration.
 
----
+K-Means is the primary segmentation method. DBSCAN is a comparison view, not an accuracy validator. Segment names and outreach text are deterministic rules derived from cluster profiles; they are not generated by an LLM.
 
-## Key Metrics
+## Output contract
 
-<div align="center">
+The CLI always writes four artifacts to the selected output directory:
 
-| Metric | Value |
-|:---|:---|
-| Prospects analyzed | **500 companies** |
-| Deal history records | **200 transactions** |
-| Features per prospect | **24 (text + numeric + social)** |
-| Text features extracted | **Up to 500 TF-IDF features per column** |
-| Clustering methods | **K-Means (primary) + DBSCAN (validation)** |
-| Optimal k selection | **Automatic via elbow method (k=2..15)** |
-| Output formats | **CSV, JSON, interactive HTML, Markdown report** |
+| Artifact | Review purpose |
+|---|---|
+| `segments.csv` | Source fields, deal aggregates, cluster assignment, name, and 2-D projection for all 500 prospects |
+| `segment_profiles.json` | K-Means and DBSCAN profile summaries |
+| `visualization.html` | Self-contained, interactive Plotly scatter plot |
+| `report.md` | Human-readable profiles and rule-based outreach recommendations |
 
-</div>
+`scripts/verify_artifacts.py` fails closed if the row counts, deal integration, named profiles, projection columns, or visualization contract is broken. The integration test also runs the PCA pipeline twice and compares SHA-256 hashes for every artifact.
 
----
+## CLI
 
-## Features
-
-**Two Ways to Use It**
-
-| Interface | Best For |
-|:---|:---|
-| **Command Line (CLI)** | Automated pipelines, batch processing, scheduled runs |
-| **Streamlit Web App** | Exploring segments visually, presenting to stakeholders, interactive filtering |
-
-**What You Get Out**
-
-- **segments.csv** -- Every prospect tagged with a segment name
-- **segment_profiles.json** -- Per-segment statistics (median revenue, top industry, campaign themes)
-- **visualization.html** -- Interactive 2D scatter plot showing all clusters, color-coded
-- **report.md** -- Full markdown report with tables, breakdowns, and outreach recommendations
-
----
-
-## Architecture
-
-```mermaid
-graph TD
-    subgraph Input ["Input Layer"]
-        P["prospects.csv\n500 records"]
-        D["deal_history.csv\n200 records"]
-    end
-
-    subgraph Processing ["Processing Layer"]
-        TP["text_processor.py\nTF-IDF vectorization\nUMAP / PCA reduction\nNumeric scaling"]
-        SG["segmentation.py\nElbow method\nK-Means clustering\nDBSCAN comparison\nProfile generation\nSegment naming"]
-    end
-
-    subgraph Output ["Output Layer"]
-        CSV["segments.csv\nTagged prospects"]
-        JSON["profiles.json\nSegment summaries"]
-        VIZ["visualization.html\nInteractive plot"]
-        RPT["report.md\nOutreach strategies"]
-    end
-
-    subgraph Interface ["Interface Layer"]
-        CLI["segment.py\nCommand Line"]
-        APP["app.py\nStreamlit Web App"]
-    end
-
-    P --> TP
-    D --> TP
-    TP --> SG
-    SG --> CSV
-    SG --> JSON
-    SG --> VIZ
-    SG --> RPT
-    CSV --> APP
-    JSON --> APP
-    VIZ --> APP
-    RPT --> APP
-    CLI --> TP
-
-    style Input fill:#E8F4FD,stroke:#4A90D9,color:#333
-    style Processing fill:#F3E8FD,stroke:#7B68EE,color:#333
-    style Output fill:#E8FDF0,stroke:#32CD32,color:#333
-    style Interface fill:#FDF8E8,stroke:#FF8C00,color:#333
+```text
+--input       Prospect CSV (default: data/prospects.csv)
+--deals       Deal-history CSV (default: data/deal_history.csv)
+--clusters    Integer or auto elbow selection (default: auto)
+--output      Artifact directory (default: results/)
+--no-umap     Use PCA instead of UMAP
+--no-dbscan   Skip the DBSCAN comparison
+--verbose     Enable debug logging
 ```
 
-```
-audience-segmentation-tool/
-├── data/
-│   ├── prospects.csv            # 500 synthetic prospect records
-│   └── deal_history.csv         # 200 historical deal records
+## Repository map
+
+```text
+.
+├── .github/workflows/tests.yml  # public Ubuntu release gate
+├── data/                        # generated and ignored
+├── notebooks/01_data_to_validation.ipynb
 ├── pipeline/
-│   ├── __init__.py
-│   ├── text_processor.py        # TF-IDF + UMAP/PCA + numeric scaling
-│   └── segmentation.py          # K-Means, DBSCAN, profile generation
-├── results/                     # Generated by the pipeline
-│   ├── segments.csv
-│   ├── segment_profiles.json
-│   ├── visualization.html
-│   └── report.md
-├── segment.py                   # CLI entry point
+│   ├── text_processor.py        # TF-IDF, reduction, numeric scaling
+│   └── segmentation.py          # K-Means, DBSCAN, profiles, naming
+├── results/                     # generated and ignored
+├── scripts/verify_artifacts.py
+├── tests/test_pipeline.py
 ├── app.py                       # Streamlit viewer
-├── generate_data.py             # Synthetic data generator
-├── requirements.txt
-└── README.md
+├── generate_data.py             # deterministic synthetic inputs
+├── segment.py                   # shared CLI/app orchestration
+├── pyproject.toml
+└── uv.lock
 ```
 
----
+## Evidence and boundaries
 
-## Sample Output
+- The included generator creates fictional companies and transactions from authored templates. No performance claim is based on customer or employer data.
+- Clusters are descriptive, not ground truth. Their usefulness must be evaluated with domain experts and downstream campaign outcomes before real use.
+- Revenue, ad spend, and outreach guidance are illustrative. They are not financial forecasts or autonomous sales instructions.
+- UMAP and K-Means are seeded. Exact repeatability is tested on the PCA path because native numerical libraries can introduce platform-level floating-point variation.
+- The public GitHub workflow installs only from `uv.lock`, checks Ruff formatting and lint, runs integration tests, executes the full UMAP pipeline, validates artifacts, and smoke-tests Streamlit.
 
-After running the pipeline, here is what a segment profile looks like:
+See [MODEL_CARD.md](MODEL_CARD.md) for intended use and limitations and [VERIFICATION.md](VERIFICATION.md) for the recorded release evidence.
 
-### Segment: "Enterprise Finance Big Spenders"
+## License
 
-| Attribute | Value |
-|:---|:---|
-| **Companies in segment** | 73 |
-| **Dominant industry** | Financial Services |
-| **Median annual revenue** | $48M |
-| **Median ad spend** | $2.1M |
-| **Top campaign themes** | Brand awareness, Q4 push, institutional trust |
-| **Social engagement tier** | High (avg. 85th percentile) |
-| **Revenue tier** | Enterprise |
-
-**Auto-generated outreach strategy:**
-
-> *These are high-budget decision-makers in financial services who invest heavily in brand campaigns. Lead with ROI case studies from peer companies, emphasize premium placement and brand safety, and propose multi-quarter commitments with volume incentives. Schedule outreach for Q3 when annual planning begins.*
-
----
-
-## Quick Start
-
-### Hardware verification
-
-```bash
-./scripts/verify_macos_metal.sh
-python -m unittest discover -s tests -v
-```
-
-The preflight fails unless the test host is an ARM64 Mac with Metal support. TF-IDF, UMAP, K-Means, and DBSCAN execute as CPU workloads on that machine; the project does not represent them as Metal-accelerated.
-
-See [VERIFICATION.md](VERIFICATION.md) for the recorded host, full-pipeline results, and reproduction commands.
-
-### 1. Install dependencies
-
-```bash
-cd audience-segmentation-tool
-pip install -r requirements.txt
-```
-
-### 2. Generate synthetic data
-
-```bash
-python generate_data.py
-```
-
-Creates `data/prospects.csv` (500 records) and `data/deal_history.csv` (200 records).
-
-### 3. Run the pipeline
-
-```bash
-python segment.py --input data/prospects.csv --clusters auto --output results/
-```
-
-### 4. Explore in the browser
-
-```bash
-streamlit run app.py
-```
-
-### CLI Options
-
-| Flag | Description | Default |
-|:---|:---|:---|
-| `--input` | Path to prospects CSV | `data/prospects.csv` |
-| `--clusters` | Number of clusters (`auto` or integer) | `auto` |
-| `--output` | Output directory | `results/` |
-| `--no-umap` | Use PCA instead of UMAP | UMAP enabled |
-| `--no-dbscan` | Skip DBSCAN comparison | DBSCAN enabled |
-| `--verbose` / `-v` | Debug logging | Off |
-
----
-
-## Why This Matters
-
-This project demonstrates the ability to take a real business problem — *"how do we sort 500 prospects into actionable groups?"* — and solve it end-to-end with applied AI:
-
-| Skill | How It Shows Up |
-|:---|:---|
-| **NLP** | TF-IDF vectorization of free-text descriptions with bigram extraction |
-| **Unsupervised ML** | K-Means with automatic cluster selection; DBSCAN for density validation |
-| **Dimensionality Reduction** | UMAP for neighborhood-preserving projection (PCA fallback) |
-| **Data Engineering** | End-to-end pipeline: raw CSV to feature engineering to clustering to output |
-| **Product Thinking** | Two interfaces (CLI + Streamlit), auto-naming, outreach strategy generation |
-| **Production Python** | Type hints, docstrings, modular architecture, cached app state |
-
----
-
-## About the Author
-
-**CJ Fleming** -- Media sales leader with 15+ years of experience across linear TV, digital, and emerging platforms. Columbia University AI certification. This project sits at the intersection of sales operations expertise and applied machine learning -- the same kind of audience analysis that drives real media sales strategy, automated with modern data science.
-
----
-
-<div align="center">
-
-MIT License
-
-</div>
+[MIT](LICENSE)

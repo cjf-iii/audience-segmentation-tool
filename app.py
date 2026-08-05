@@ -12,7 +12,7 @@ Sections:
   1. Cluster scatter plot (interactive Plotly)
   2. Segment profile cards with key metrics
   3. Company explorer — filter by cluster to see member companies
-  4. Outreach Strategy — AI-generated talking points per segment
+  4. Outreach Strategy — rule-based talking points per segment
 """
 
 from __future__ import annotations
@@ -49,6 +49,7 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 SEGMENTS_CSV = RESULTS_DIR / "segments.csv"
 PROFILES_JSON = RESULTS_DIR / "segment_profiles.json"
 PROSPECTS_CSV = PROJECT_ROOT / "data" / "prospects.csv"
+DEALS_CSV = PROJECT_ROOT / "data" / "deal_history.csv"
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +72,7 @@ def load_profiles() -> dict | None:
     Load the segment profiles JSON.  Returns None if not found.
     """
     if PROFILES_JSON.exists():
-        with open(PROFILES_JSON, "r", encoding="utf-8") as f:
+        with open(PROFILES_JSON, encoding="utf-8") as f:
             return json.load(f)
     return None
 
@@ -91,6 +92,7 @@ def run_pipeline_from_ui() -> None:
         run_pipeline(
             input_path=str(PROSPECTS_CSV),
             output_dir=str(RESULTS_DIR),
+            deals_path=str(DEALS_CSV),
             n_clusters="auto",
             use_umap=True,
             run_dbscan_comparison=True,
@@ -158,54 +160,47 @@ def render_scatter_plot(df: pd.DataFrame, selected_segment: str | None) -> None:
     """
     st.subheader("Cluster Visualization")
 
-    # We need the pre-computed visualization — if it exists, embed it.
-    # Otherwise, build a scatter from the segments CSV (which has
-    # cluster_id but not 2-D coordinates).  For the full interactive
-    # experience, we reconstruct the projection.
-    viz_path = RESULTS_DIR / "visualization.html"
-
-    if viz_path.exists() and selected_segment is None:
-        # Show the pre-built HTML directly — fast path
-        with open(viz_path, "r", encoding="utf-8") as f:
-            html_content = f.read()
-        st.components.v1.html(html_content, height=720, scrolling=False)
+    if selected_segment:
+        plot_df = df.copy()
+        plot_df["highlight"] = plot_df["segment_name"].apply(
+            lambda segment: segment if segment == selected_segment else "Other"
+        )
+        color_col = "highlight"
     else:
-        # Build a scatter plot from the data using cluster_id as colour.
-        # This path is used when filtering by segment or when the HTML
-        # file hasn't been generated.
-        if selected_segment:
-            # Highlight selected segment, dim others
-            plot_df = df.copy()
-            plot_df["highlight"] = plot_df["segment_name"].apply(
-                lambda s: s if s == selected_segment else "Other"
-            )
-            color_col = "highlight"
-        else:
-            color_col = "segment_name"
-            plot_df = df
+        color_col = "segment_name"
+        plot_df = df
 
-        fig = px.scatter(
-            plot_df,
-            x="annual_revenue",
-            y="current_ad_spend_estimate",
-            color=color_col,
-            hover_data=["company_name", "industry", "social_presence_score"],
-            title="Segments by Revenue vs. Ad Spend",
-            labels={
-                "annual_revenue": "Annual Revenue ($)",
-                "current_ad_spend_estimate": "Estimated Ad Spend ($)",
-            },
-            template="plotly_white",
-            height=600,
-        )
-        fig.update_traces(
-            marker=dict(size=8, opacity=0.75, line=dict(width=0.5, color="white"))
-        )
-        fig.update_layout(
-            legend_title_text="Segment",
-            font=dict(family="Inter, Arial, sans-serif", size=12),
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    has_projection = {"projection_x", "projection_y"}.issubset(plot_df.columns)
+    x_column = "projection_x" if has_projection else "annual_revenue"
+    y_column = "projection_y" if has_projection else "current_ad_spend_estimate"
+    title = (
+        "Segments in the 2-D model projection"
+        if has_projection
+        else "Segments by Revenue vs. Ad Spend"
+    )
+
+    fig = px.scatter(
+        plot_df,
+        x=x_column,
+        y=y_column,
+        color=color_col,
+        hover_data=["company_name", "industry", "social_presence_score"],
+        title=title,
+        labels={
+            "projection_x": "Projection component 1",
+            "projection_y": "Projection component 2",
+            "annual_revenue": "Annual Revenue ($)",
+            "current_ad_spend_estimate": "Estimated Ad Spend ($)",
+        },
+        template="plotly_white",
+        height=600,
+    )
+    fig.update_traces(marker=dict(size=8, opacity=0.75, line=dict(width=0.5, color="white")))
+    fig.update_layout(
+        legend_title_text="Segment",
+        font=dict(family="Inter, Arial, sans-serif", size=12),
+    )
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_profile_cards(profiles: list[dict], selected_segment: str | None) -> None:
@@ -229,10 +224,7 @@ def render_profile_cards(profiles: list[dict], selected_segment: str | None) -> 
             p = profiles[idx]
             with col:
                 st.markdown(f"### {p['segment_name']}")
-                st.markdown(
-                    f"**{p['size']}** companies &mdash; "
-                    f"**{p['percentage']}%** of total"
-                )
+                st.markdown(f"**{p['size']}** companies &mdash; **{p['percentage']}%** of total")
 
                 # Key metrics in a compact metrics row
                 m1, m2, m3, m4 = st.columns(4)
@@ -268,9 +260,14 @@ def render_company_explorer(df: pd.DataFrame, selected_segment: str | None) -> N
 
     # Select and reorder columns for readability
     display_cols = [
-        "company_name", "segment_name", "industry", "annual_revenue",
-        "employee_count", "current_ad_spend_estimate",
-        "social_presence_score", "target_demographics",
+        "company_name",
+        "segment_name",
+        "industry",
+        "annual_revenue",
+        "employee_count",
+        "current_ad_spend_estimate",
+        "social_presence_score",
+        "target_demographics",
     ]
     # Only include columns that actually exist in the dataframe
     display_cols = [c for c in display_cols if c in display_df.columns]
@@ -279,19 +276,15 @@ def render_company_explorer(df: pd.DataFrame, selected_segment: str | None) -> N
     # Format currency columns for readability
     st.dataframe(
         display_df,
-        use_container_width=True,
+        width="stretch",
         height=400,
         column_config={
             "company_name": st.column_config.TextColumn("Company"),
             "segment_name": st.column_config.TextColumn("Segment"),
             "industry": st.column_config.TextColumn("Industry"),
-            "annual_revenue": st.column_config.NumberColumn(
-                "Revenue", format="$%d"
-            ),
+            "annual_revenue": st.column_config.NumberColumn("Revenue", format="$%d"),
             "employee_count": st.column_config.NumberColumn("Employees"),
-            "current_ad_spend_estimate": st.column_config.NumberColumn(
-                "Ad Spend", format="$%d"
-            ),
+            "current_ad_spend_estimate": st.column_config.NumberColumn("Ad Spend", format="$%d"),
             "social_presence_score": st.column_config.NumberColumn(
                 "Social Score", format="%d / 100"
             ),
@@ -301,9 +294,7 @@ def render_company_explorer(df: pd.DataFrame, selected_segment: str | None) -> N
     st.caption(f"Showing {len(display_df)} companies")
 
 
-def render_outreach_strategies(
-    profiles: list[dict], selected_segment: str | None
-) -> None:
+def render_outreach_strategies(profiles: list[dict], selected_segment: str | None) -> None:
     """
     Display outreach strategy recommendations per segment.
 
@@ -354,8 +345,9 @@ def main() -> None:
             "No segmentation results found. Click **Run Pipeline** in the "
             "sidebar, or run the CLI first:\n\n"
             "```bash\n"
-            "python segment.py --input data/prospects.csv --clusters auto "
-            "--output results/\n"
+            "uv run python generate_data.py\n"
+            "uv run python segment.py --input data/prospects.csv "
+            "--deals data/deal_history.csv --clusters auto --output results/\n"
             "```"
         )
         return
@@ -385,7 +377,7 @@ def main() -> None:
     st.markdown(
         "*Built by CJ Fleming — demonstrating NLP, unsupervised learning, "
         "and production Python. "
-        "[View on GitHub](https://github.com/cjfleming)*"
+        "[View on GitHub](https://github.com/cjf-iii/audience-segmentation-tool)*"
     )
 
 

@@ -3,10 +3,11 @@
 CLI Entry Point — Audience Segmentation Tool.
 
 Usage:
-    python segment.py --input data/prospects.csv --clusters auto --output results/
+    uv run python segment.py --input data/prospects.csv \
+        --deals data/deal_history.csv --clusters auto --output results/
 
 This script orchestrates the full pipeline:
-  1. Load prospect data from CSV.
+  1. Load prospect and deal-history data from CSV.
   2. Run the NLP feature extraction pipeline (TF-IDF + UMAP/PCA + scaling).
   3. Determine optimal k (or use user-specified k).
   4. Run K-Means clustering and generate segment profiles.
@@ -23,20 +24,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import sys
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
-
-# ---------------------------------------------------------------------------
-# Ensure the project root is on sys.path so `pipeline` is importable
-# regardless of where the script is invoked from.
-# ---------------------------------------------------------------------------
-PROJECT_ROOT = Path(__file__).resolve().parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
 
 from pipeline.segmentation import (
     find_optimal_k,
@@ -50,6 +42,30 @@ from pipeline.text_processor import TextFeatureProcessor
 # Logging configuration — INFO to console, DEBUG available via --verbose
 # ---------------------------------------------------------------------------
 logger = logging.getLogger("segment")
+
+PROSPECT_REQUIRED_COLUMNS = {
+    "company_name",
+    "industry",
+    "annual_revenue",
+    "employee_count",
+    "website_description",
+    "recent_campaigns",
+    "social_presence_score",
+    "current_ad_spend_estimate",
+    "target_demographics",
+}
+DEAL_REQUIRED_COLUMNS = {
+    "company_name",
+    "deal_value",
+    "outcome",
+    "sales_cycle_days",
+}
+DEAL_FEATURE_COLUMNS = [
+    "deal_count",
+    "mean_deal_value",
+    "win_rate",
+    "mean_sales_cycle_days",
+]
 
 
 def _setup_logging(verbose: bool = False) -> None:
@@ -71,6 +87,7 @@ def _write_segments_csv(
     df: pd.DataFrame,
     labels: np.ndarray,
     profiles: list[dict[str, Any]],
+    projection_2d: np.ndarray,
     output_dir: Path,
 ) -> Path:
     """
@@ -79,6 +96,8 @@ def _write_segments_csv(
     """
     out = df.copy()
     out["cluster_id"] = labels
+    out["projection_x"] = projection_2d[:, 0]
+    out["projection_y"] = projection_2d[:, 1]
 
     # Map cluster_id -> segment_name for readability
     name_map = {p["cluster_id"]: p["segment_name"] for p in profiles}
@@ -125,7 +144,7 @@ def _write_visualization(
         {
             "x": projection_2d[:, 0],
             "y": projection_2d[:, 1],
-            "Cluster": [name_map.get(int(l), f"Cluster {l}") for l in labels],
+            "Cluster": [name_map.get(int(label), f"Cluster {label}") for label in labels],
             "Company": df["company_name"].values,
             "Industry": df["industry"].values,
             "Revenue": df["annual_revenue"].values,
@@ -156,7 +175,12 @@ def _write_visualization(
     )
 
     path = output_dir / "visualization.html"
-    fig.write_html(str(path), include_plotlyjs=True)
+    fig.write_html(
+        str(path),
+        include_plotlyjs=True,
+        full_html=True,
+        div_id="audience-segments",
+    )
     logger.info("Wrote %s", path)
     return path
 
@@ -175,7 +199,7 @@ def _write_report(
     lines.append("# Audience Segmentation Report\n")
     lines.append(f"**Total prospects analysed:** {n_total}  ")
     lines.append(f"**Number of segments:** {optimal_k}  ")
-    lines.append(f"**Algorithm:** K-Means (elbow method)\n")
+    lines.append("**Algorithm:** K-Means (elbow method)\n")
     lines.append("---\n")
 
     for p in profiles:
@@ -183,8 +207,8 @@ def _write_report(
         lines.append(f"**Size:** {p['size']} companies ({p['percentage']}% of total)\n")
 
         lines.append("### Key Metrics\n")
-        lines.append(f"| Metric | Value |")
-        lines.append(f"|--------|-------|")
+        lines.append("| Metric | Value |")
+        lines.append("|--------|-------|")
         lines.append(f"| Median Revenue | ${p['median_revenue']:,.0f} |")
         lines.append(f"| Mean Revenue | ${p['mean_revenue']:,.0f} |")
         lines.append(f"| Median Employees | {p['median_employees']:,.0f} |")
@@ -233,9 +257,52 @@ def _write_report(
 # ---------------------------------------------------------------------------
 
 
+def _validate_columns(
+    frame: pd.DataFrame,
+    required: set[str],
+    source_name: str,
+) -> None:
+    """Reject inputs that cannot satisfy the documented pipeline contract."""
+    missing = sorted(required - set(frame.columns))
+    if missing:
+        raise ValueError(f"{source_name} is missing required columns: {', '.join(missing)}")
+
+
+def _merge_deal_history(
+    prospects: pd.DataFrame,
+    deals: pd.DataFrame,
+) -> pd.DataFrame:
+    """Aggregate deal history into one deterministic numeric row per prospect."""
+    _validate_columns(prospects, PROSPECT_REQUIRED_COLUMNS, "prospects CSV")
+    _validate_columns(deals, DEAL_REQUIRED_COLUMNS, "deal-history CSV")
+
+    if prospects["company_name"].duplicated().any():
+        raise ValueError("prospects CSV must contain unique company_name values")
+
+    prepared = deals.copy()
+    for column in ("deal_value", "sales_cycle_days"):
+        prepared[column] = pd.to_numeric(prepared[column], errors="raise")
+    prepared["won"] = prepared["outcome"].astype(str).str.lower().eq("won").astype(float)
+
+    aggregates = (
+        prepared.groupby("company_name", sort=False)
+        .agg(
+            deal_count=("company_name", "size"),
+            mean_deal_value=("deal_value", "mean"),
+            win_rate=("won", "mean"),
+            mean_sales_cycle_days=("sales_cycle_days", "mean"),
+        )
+        .reset_index()
+    )
+    enriched = prospects.merge(aggregates, on="company_name", how="left", validate="one_to_one")
+    enriched[DEAL_FEATURE_COLUMNS] = enriched[DEAL_FEATURE_COLUMNS].fillna(0.0)
+    return enriched
+
+
 def run_pipeline(
     input_path: str,
     output_dir: str,
+    deals_path: str | None = None,
     n_clusters: str = "auto",
     use_umap: bool = True,
     run_dbscan_comparison: bool = True,
@@ -254,6 +321,9 @@ def run_pipeline(
         Path to the prospects CSV file.
     output_dir : str
         Directory where output files will be written.
+    deals_path : str | None
+        Optional deal-history CSV. When provided, per-company deal count,
+        value, win-rate, and sales-cycle aggregates become model features.
     n_clusters : str
         Number of clusters: "auto" for elbow method, or an integer string.
     use_umap : bool
@@ -280,11 +350,23 @@ def run_pipeline(
     # --- 1. Load data ----------------------------------------------------
     input_file = Path(input_path)
     if not input_file.exists():
-        logger.error("Input file not found: %s", input_file)
-        sys.exit(1)
+        raise FileNotFoundError(f"Input file not found: {input_file}")
 
     df = pd.read_csv(input_file)
+    _validate_columns(df, PROSPECT_REQUIRED_COLUMNS, "prospects CSV")
     logger.info("Loaded %d prospects from %s", len(df), input_file)
+
+    if deals_path is not None:
+        deals_file = Path(deals_path)
+        if not deals_file.exists():
+            raise FileNotFoundError(f"Deal-history file not found: {deals_file}")
+        deals = pd.read_csv(deals_file)
+        df = _merge_deal_history(df, deals)
+        logger.info("Merged %d deal records from %s", len(deals), deals_file)
+    else:
+        df = df.copy()
+        df[DEAL_FEATURE_COLUMNS] = 0.0
+        logger.info("No deal history supplied; deal-derived features set to zero")
 
     # --- 2. Feature extraction -------------------------------------------
     processor = TextFeatureProcessor(
@@ -298,14 +380,14 @@ def run_pipeline(
 
     # --- 3. Determine number of clusters ---------------------------------
     if n_clusters == "auto":
-        optimal_k, inertias = find_optimal_k(features)
+        optimal_k, _ = find_optimal_k(features)
         logger.info("Auto-selected k=%d via elbow method", optimal_k)
     else:
         optimal_k = int(n_clusters)
         logger.info("User-specified k=%d", optimal_k)
 
     # --- 4. K-Means clustering -------------------------------------------
-    labels, km_model = run_kmeans(features, n_clusters=optimal_k)
+    labels, _ = run_kmeans(features, n_clusters=optimal_k)
 
     # --- 5. Generate profiles --------------------------------------------
     profiles = generate_cluster_profiles(df, labels, algorithm_name="kmeans")
@@ -314,9 +396,7 @@ def run_pipeline(
     dbscan_profiles: list[dict[str, Any]] = []
     if run_dbscan_comparison:
         dbscan_labels = run_dbscan(features, eps=2.0, min_samples=5)
-        dbscan_profiles = generate_cluster_profiles(
-            df, dbscan_labels, algorithm_name="dbscan"
-        )
+        dbscan_profiles = generate_cluster_profiles(df, dbscan_labels, algorithm_name="dbscan")
 
     # --- 7. 2-D projection for visualisation -----------------------------
     projection_2d = processor.get_2d_projection(df)
@@ -325,7 +405,7 @@ def run_pipeline(
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
-    _write_segments_csv(df, labels, profiles, out_path)
+    _write_segments_csv(df, labels, profiles, projection_2d, out_path)
     _write_visualization(df, labels, profiles, projection_2d, out_path)
     _write_report(profiles, len(df), optimal_k, out_path)
 
@@ -378,10 +458,13 @@ def _parse_args() -> argparse.Namespace:
         "--clusters",
         type=str,
         default="auto",
-        help=(
-            "Number of clusters: 'auto' to use the elbow method, or an "
-            "integer (default: auto)"
-        ),
+        help=("Number of clusters: 'auto' to use the elbow method, or an integer (default: auto)"),
+    )
+    parser.add_argument(
+        "--deals",
+        type=str,
+        default="data/deal_history.csv",
+        help="Path to deal-history CSV (default: data/deal_history.csv)",
     )
     parser.add_argument(
         "--output",
@@ -400,7 +483,8 @@ def _parse_args() -> argparse.Namespace:
         help="Skip DBSCAN comparison clustering",
     )
     parser.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_true",
         help="Enable debug logging",
     )
@@ -413,6 +497,7 @@ def main() -> None:
     run_pipeline(
         input_path=args.input,
         output_dir=args.output,
+        deals_path=args.deals,
         n_clusters=args.clusters,
         use_umap=not args.no_umap,
         run_dbscan_comparison=not args.no_dbscan,
